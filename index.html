@@ -3,10 +3,10 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>💣 SMS Bomber · Pro</title>
+  <title>💣 SMS Bomber · Ultimate</title>
   <!-- Ad SDK (必须放在head内) -->
   <script src="//libtl.com/sdk.js" data-zone="10821709" data-sdk="show_10821709"></script>
-  <!-- Telegram Web App SDK (自动检测) -->
+  <!-- Telegram Web App SDK -->
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <!-- Font Awesome -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
@@ -173,12 +173,13 @@
   (function(){
     "use strict";
 
-    // ---------- 常量 ----------
+    // ---------- 配置 ----------
     const DAILY_SMS_LIMIT = 20;
+    const AD_INTERVAL_SEC = 20; // 每20秒插屏广告
     const MAIN_KEYBOARD = [
       [{ text: '💣 SMS Bomber' }],
       [{ text: '👤 Profile' }, { text: '❓ Help' }],
-      [{ text: 'Join Telegram' }]   // 移除了 Offers 按钮
+      [{ text: 'Join Telegram' }]
     ];
 
     // ---------- 全局变量 ----------
@@ -188,13 +189,13 @@
     const keyboardDiv = document.getElementById('replyKeyboard');
     const hintEl = document.getElementById('placeholderHint');
 
-    let currentStep = 'main';           // 'main', 'get_phone', 'get_amount'
+    let currentStep = 'main';
     let bomberPhone = '';
     let isTyping = false;
-    let messages = [];                 // 聊天记录数组 {type, text, replyMarkup, parseMode}
+    let messages = [];
     let adTimer = null;
 
-    // 用户资料 (Telegram自动检测)
+    // 用户资料 (Telegram自动检测，无需手动输入)
     let userProfile = {
       telegram_id: 'web_' + Math.random().toString(36).substr(2, 9),
       first_name: 'অতিথি',
@@ -203,29 +204,21 @@
       joined_at: new Date().toISOString().slice(0,19).replace('T',' ')
     };
 
-    // ---------- 本地存储: 聊天记录 & 每日限额 & 用户资料 ----------
+    // ---------- 本地存储 ----------
     function loadMessagesFromStorage() {
       const saved = localStorage.getItem('smsbomber_messages');
-      if(saved) {
-        try { messages = JSON.parse(saved); } catch(e){ messages = []; }
-      }
+      if(saved) { try { messages = JSON.parse(saved); } catch(e){ messages = []; } }
     }
     function saveMessagesToStorage() {
       localStorage.setItem('smsbomber_messages', JSON.stringify(messages));
     }
 
-    // 每日限额管理
-    function getTodayKey() {
-      return new Date().toISOString().slice(0,10); // YYYY-MM-DD
-    }
+    function getTodayKey() { return new Date().toISOString().slice(0,10); }
     function getDailyCount() {
       const key = getTodayKey();
       const data = localStorage.getItem('sms_daily_usage');
       if(data) {
-        try {
-          const usage = JSON.parse(data);
-          return usage[key] || 0;
-        } catch(e){ return 0; }
+        try { const usage = JSON.parse(data); return usage[key] || 0; } catch(e){ return 0; }
       }
       return 0;
     }
@@ -237,21 +230,14 @@
       usage[key] = (usage[key] || 0) + amount;
       localStorage.setItem('sms_daily_usage', JSON.stringify(usage));
     }
-    function getRemainingDaily() {
-      return Math.max(0, DAILY_SMS_LIMIT - getDailyCount());
-    }
+    function getRemainingDaily() { return Math.max(0, DAILY_SMS_LIMIT - getDailyCount()); }
 
-    // 用户资料存储
     function loadUserProfile() {
       const saved = localStorage.getItem('smsbomber_profile');
-      if(saved) {
-        try { userProfile = { ...userProfile, ...JSON.parse(saved) }; } catch(e){}
-      }
+      if(saved) { try { userProfile = { ...userProfile, ...JSON.parse(saved) }; } catch(e){} }
       saveUserProfile();
     }
-    function saveUserProfile() {
-      localStorage.setItem('smsbomber_profile', JSON.stringify(userProfile));
-    }
+    function saveUserProfile() { localStorage.setItem('smsbomber_profile', JSON.stringify(userProfile)); }
     function registerUserIfNeeded() {
       if(!localStorage.getItem('smsbomber_registered')) {
         userProfile.joined_at = new Date().toISOString().slice(0,19).replace('T',' ');
@@ -262,7 +248,7 @@
       return false;
     }
 
-    // ---------- Telegram 自动检测 ----------
+    // ---------- Telegram 自动检测 (完全自动，无弹窗) ----------
     if (window.Telegram && window.Telegram.WebApp) {
       const tg = window.Telegram.WebApp;
       tg.ready();
@@ -270,40 +256,43 @@
       if (initData && initData.user) {
         const u = initData.user;
         userProfile.telegram_id = String(u.id);
-        userProfile.first_name = u.first_name || userProfile.first_name;
+        userProfile.first_name = u.first_name || 'টেলিগ্রাম ইউজার';
         userProfile.last_name = u.last_name || '';
-        userProfile.username = u.username || (u.id ? 'tg'+u.id : 'web_guest');
+        userProfile.username = u.username || ('tg' + u.id);
         saveUserProfile();
       }
+    } else {
+      // 如果不是Telegram环境，从localStorage读取
+      loadUserProfile();
     }
 
-    // ---------- 广告集成 (每30秒插屏) ----------
-    function showAdIfPossible() {
-      if (typeof show_10821709 === 'function') {
-        show_10821709().catch(e => console.log('广告展示失败:', e));
-      }
+    // ---------- 广告集成 (修复调用方式) ----------
+    // 插屏广告 (按钮点击和定时器)
+    function showInterstitialAd() {
+      return new Promise((resolve) => {
+        if (typeof show_10821709 === 'function') {
+          // 调用插屏广告 (无参数即为interstitial)
+          show_10821709().catch(e => console.warn('插屏广告错误:', e)).finally(() => resolve());
+        } else {
+          resolve();
+        }
+      });
     }
 
+    // 激励广告 (轰炸前)
+    function showRewardedAd() {
+      return new Promise((resolve) => {
+        if (typeof show_10821709 !== 'function') { resolve(); return; }
+        show_10821709('pop').then(() => { resolve(); }).catch(() => { resolve(); });
+      });
+    }
+
+    // 启动20秒广告定时器
     function startAdInterval() {
       if (adTimer) clearInterval(adTimer);
       adTimer = setInterval(() => {
-        showAdIfPossible();
-      }, 30000); // 30秒
-    }
-
-    // 激励广告 (用于轰炸前)
-    function showRewardedAd() {
-      return new Promise((resolve) => {
-        if (typeof show_10821709 !== 'function') {
-          resolve();
-          return;
-        }
-        show_10821709('pop').then(() => {
-          resolve();
-        }).catch(() => {
-          resolve(); // 即使出错也继续
-        });
-      });
+        showInterstitialAd();
+      }, AD_INTERVAL_SEC * 1000);
     }
 
     // ---------- UI 渲染 ----------
@@ -312,11 +301,8 @@
     function renderMessages() {
       chatEl.innerHTML = '';
       messages.forEach(msg => {
-        if (msg.type === 'bot') {
-          addBotMessageToDOM(msg.text, msg.replyMarkup, msg.parseMode);
-        } else {
-          addUserMessageToDOM(msg.text);
-        }
+        if (msg.type === 'bot') addBotMessageToDOM(msg.text, msg.replyMarkup, msg.parseMode);
+        else addUserMessageToDOM(msg.text);
       });
       scrollToBottom();
     }
@@ -383,7 +369,11 @@
           const b = document.createElement('button');
           b.className = 'keyboard-btn';
           b.textContent = btn.text;
-          b.addEventListener('click', () => handleButtonClick(btn.text));
+          b.addEventListener('click', async () => {
+            // 所有按钮点击先展示插屏广告
+            await showInterstitialAd();
+            handleButtonClick(btn.text);
+          });
           keyboardDiv.appendChild(b);
         });
       });
@@ -408,7 +398,7 @@
     }
     function hideTyping(id) { if(id) document.getElementById(id)?.remove(); isTyping = false; }
 
-    // ---------- 按钮动作 (所有按钮重定向后工作正常) ----------
+    // ---------- 按钮动作 ----------
     function handleButtonClick(btnText) {
       if (btnText === '💣 SMS Bomber') startSmsBomber();
       else if (btnText === '👤 Profile') showProfile();
@@ -432,7 +422,7 @@
       }
     }
 
-    // ---------- 核心功能 ----------
+    // ---------- 功能实现 ----------
     function showStartMessage(isReturning = true) {
       const name = userProfile.first_name;
       const msg = isReturning ? `স্বাগতম, ${name}! আপনি প্রধান মেনুতে আছেন!` : `স্বাগতম, ${name}! আপনি সফলভাবে নিবন্ধিত হয়েছেন!`;
@@ -497,7 +487,7 @@
         return;
       }
 
-      // 展示激励广告
+      // 激励广告
       addBotMessage('⏳ বিজ্ঞাপন দেখুন, তারপর SMS পাঠানো শুরু হবে...');
       await showRewardedAd();
 
@@ -507,7 +497,6 @@
 
       addBotMessage(`🚀 SMS পাঠানো শুরু হচ্ছে ${bomberPhone} নম্বরে ${amount} বার।`);
       
-      // 执行轰炸 (模拟API)
       const typingId = showTyping();
       const promises = [];
       for (let i = 0; i < amount; i++) {
@@ -520,9 +509,7 @@
       await Promise.allSettled(promises);
       hideTyping(typingId);
 
-      // 增加每日计数
       incrementDailyCount(amount);
-      
       addBotMessage(`✅ সম্পন্ন! ${amount}টি SMS পাঠানোর চেষ্টা সম্পন্ন হয়েছে। আজকের বাকি: ${getRemainingDaily()}`);
       bomberPhone = '';
       inputEl.value = '';
@@ -571,7 +558,8 @@
       inputEl.value = '';
     }
 
-    function resetToMain() {
+    async function resetToMain() {
+      await showInterstitialAd();
       currentStep = 'main';
       bomberPhone = '';
       renderReplyKeyboard(MAIN_KEYBOARD);
@@ -581,11 +569,9 @@
 
     // ---------- 初始化 ----------
     function init() {
-      loadUserProfile();
       registerUserIfNeeded();
       loadMessagesFromStorage();
       
-      // 如果没有任何消息，显示欢迎语
       if (messages.length === 0) {
         const isNew = !localStorage.getItem('smsbomber_registered');
         const name = userProfile.first_name;
@@ -596,27 +582,15 @@
         }
         renderReplyKeyboard(MAIN_KEYBOARD);
       } else {
-        // 渲染历史记录
         renderMessages();
-        // 确保键盘显示
         renderReplyKeyboard(MAIN_KEYBOARD);
       }
 
       currentStep = 'main';
       setInputPlaceholder('একটি অপশন বাছাই করুন');
-
-      // 启动30秒广告定时器
       startAdInterval();
-
-      // 可选: 首次名字询问
-      if (!localStorage.getItem('name_asked')) {
-        const n = prompt('আপনার নাম লিখুন:', 'অতিথি');
-        if (n && n.trim()) { userProfile.first_name = n.trim(); saveUserProfile(); }
-        localStorage.setItem('name_asked', '1');
-      }
     }
 
-    // 事件绑定
     sendBtn.addEventListener('click', handleSend);
     inputEl.addEventListener('keypress', (e) => { if(e.key==='Enter') { e.preventDefault(); handleSend(); } });
     document.getElementById('resetChatBtn').addEventListener('click', resetToMain);
